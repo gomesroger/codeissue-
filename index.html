@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roger's AI Assistant / ロジャーのAIアシスタント</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* General Reset and Body Styling */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient-en: linear-gradient(45deg, #4CAF50, #8BC34A);
+            --secondary-gradient-ja: linear-gradient(45deg, #FFC107, #FF9800);
+            --light-grey: #f0f0f0;
+            --medium-grey: #e0e0e0;
+            --dark-grey: #333;
+            --white: #ffffff;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.2);
+            --success-bg: #e8f5e8;
+            --success-text: #2d5a2d;
+            --star-color: #FFD700;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Language Selection Screen Styling */
+        .language-selection-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100%;
+            max-width: 450px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px var(--shadow-light);
+            animation: slideUp 0.6s ease-out;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .language-selection-screen h1 {
+            font-size: 1.8em;
+            color: var(--dark-grey);
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .language-button {
+            padding: 15px 30px;
+            margin: 10px 0;
+            width: 80%;
+            max-width: 250px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px var(--shadow-light);
+            color: var(--white);
+        }
+
+        .language-button.english {
+            background: var(--secondary-gradient-en);
+        }
+
+        .language-button.japanese {
+            background: var(--secondary-gradient-ja);
+        }
+
+        .language-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow-medium);
+        }
+
+        /* Chat Container Styling */
+        .chat-container {
+            max-width: 450px;
+            width: 100%;
+            min-height: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px var(--shadow-light);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 40px;
+            display: none; /* Initially hidden */
+        }
+
+        /* Chat Header Styling */
+        .chat-header {
+            background: var(--primary-gradient);
+            color: var(--white);
+            padding: 20px;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+        }
+        .profile-pic {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            border: 3px solid var(--white);
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .profile-pic img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: 50% 10%;
+        }
+        .profile-pic .avatar-fallback {
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 50%;
+        }
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .chat-subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* Video Overlay Styling */
+        .welcome-video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px 20px 0 0;
+            z-index: 7;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+        }
+
+        .welcome-video-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Styling to hide header elements when video is playing */
+        .chat-header.video-active .profile-pic,
+        .chat-header.video-active .chat-title,
+        .chat-header.video-active .chat-subtitle {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Chat Messages Area */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            animation: messageSlide 0.3s ease-out;
+            line-height: 1.4;
+        }
+        .message.bot {
+            background: var(--light-grey);
+            color: var(--dark-grey);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .message.user {
+            background: var(--primary-gradient);
+            color: var(--white);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--light-grey);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            max-width: 80px;
+            align-self: flex-start;
+        }
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite;
+        }
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* Chat Input Area */
+        .chat-input-container {
+            padding: 20px;
+            border-top: 1px solid var(--medium-grey);
+            background: var(--white);
+            border-radius: 0 0 20px 20px;
+        }
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid var(--medium-grey);
+            border-radius: 20px;
+            font-size: 14px;
+            resize: none;
+            max-height: 100px;
+            min-height: 40px;
+            line-height: 1.4;
+            font-family: inherit;
+            transition: border-color 0.2s ease-in-out;
+        }
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: var(--primary-gradient);
+            color: var(--white);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            background: #ccc;
+        }
+
+        /* Quick Replies */
+        .quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            justify-content: center; /* Center quick replies */
+        }
+        .quick-reply {
+            padding: 8px 12px;
+            background: var(--white);
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-grow: 1; /* Allow buttons to grow */
+            max-width: calc(50% - 4px); /* Max two per row on smaller screens */
+            text-align: center;
+        }
+        .quick-reply:hover {
+            background: #667eea;
+            color: var(--white);
+        }
+        @media (min-width: 380px) {
+            .quick-reply {
+                max-width: none; /* Allow more flexible width on wider screens */
+                flex-grow: 0;
+            }
+        }
+
+
+        /* Message Form Styles */
+        .message-form {
+            flex: 1;
+            padding: 20px;
+            background: var(--white);
+            border-radius: 0 0 20px 20px;
+            border-top: 1px solid var(--medium-grey);
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark-grey);
+            font-size: 14px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--medium-grey);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s ease-in-out;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-submit-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .form-submit {
+            flex: 1;
+            padding: 12px;
+            background: var(--primary-gradient);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .form-submit:hover {
+            transform: translateY(-2px);
+        }
+        .form-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            background: #ccc;
+        }
+        .generate-draft-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--light-grey);
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .generate-draft-btn:hover {
+            transform: translateY(-2px);
+            background: #e0e0e0;
+        }
+        .generate-draft-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            background: #ccc;
+            color: #666;
+            border-color: #999;
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes messageSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scrollbar Styling */
+        .chat-messages::-webkit-scrollbar,
+        .message-form::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-messages::-webkit-scrollbar-track,
+        .message-form::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-messages::-webkit-scrollbar-thumb,
+        .message-form::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 2px;
+        }
+
+        /* Message Timestamp */
+        .message-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .message.bot .message-time {
+            text-align: left;
+        }
+
+        /* Close Notice (for form submission success) */
+        .close-notice {
+            background: var(--success-bg);
+            color: var(--success-text);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .close-notice .email-content-display {
+            background: #f9f9f9;
+            border: 1px solid var(--medium-grey);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: left;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .close-notice .copy-btn {
+            background: #667eea;
+            color: var(--white);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .close-notice .copy-btn:hover {
+            background: #764ba2;
+        }
+
+        /* Star Rating Styles */
+        .chat-rating-container {
+            padding: 20px;
+            background: var(--white);
+            border-top: 1px solid var(--medium-grey);
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+        }
+        .rating-prompt {
+            font-size: 14px;
+            color: var(--dark-grey);
+            margin-bottom: 10px;
+        }
+        .stars {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .star {
+            width: 30px;
+            height: 30px;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s ease-in-out, transform 0.1s ease-out;
+        }
+        .star:hover {
+            transform: scale(1.1);
+        }
+        .star.selected {
+            color: var(--star-color);
+        }
+        .rating-thank-you {
+            font-size: 12px;
+            color: var(--success-text);
+            margin-top: 10px;
+        }
+
+        /* Creator Signature Styles */
+        .creator-signature {
+            font-size: 10px;
+            color: #888;
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid var(--medium-grey);
+            background: var(--white);
+            border-radius: 0 0 20px 20px;
+            margin-top: auto;
+        }
+
+        /* Resume Links Styling */
+        .resume-links-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .resume-links-container p {
+            font-size: 1em;
+            color: var(--dark-grey);
+            margin-bottom: 5px;
+        }
+
+        .resume-link {
+            display: inline-block;
+            padding: 10px 15px;
+            background: var(--primary-gradient);
+            color: var(--white);
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 8px var(--shadow-light);
+        }
+
+        .resume-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px var(--shadow-medium);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="language-selection-screen" id="languageSelectionScreen">
+        <h1>Select your language / 言語を選択してください</h1>
+        <button class="language-button english" data-lang="en">English</button>
+        <button class="language-button japanese" data-lang="ja">日本語</button>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <div class="profile-pic" id="profilePicContainer">
+                <img src="https://i.imgur.com/ThRrtS2.jpeg" alt="AI Assistant" onerror="this.style.display='none'; document.getElementById('avatarFallback').style.display='flex';">
+                <div class="avatar-fallback" id="avatarFallback" style="display: none;">🤖</div>
+            </div>
+            <div class="chat-title">Roger's AI Assistant</div>
+            <div class="chat-subtitle">ロジャーのAIアシスタント</div>
+            <video id="welcomeVideoPlayer" class="welcome-video-overlay" autoplay playsinline preload="auto"></video>
+        </div>
+        <div class="chat-messages" id="chatMessages" role="log" aria-live="polite">
+            <!-- Messages will be populated here by JavaScript -->
+        </div>
+        <div class="chat-input-container" id="chatInputContainer">
+            <div id="quickReplies" class="quick-replies hidden">
+                <!-- Quick replies will be populated here by JavaScript -->
+            </div>
+            <div class="chat-input-wrapper">
+                <textarea
+                    id="chatInput"
+                    class="chat-input"
+                    placeholder="Type your message..."
+                    rows="1"
+                ></textarea>
+                <button id="sendBtn" class="send-btn" title="Send message">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="message-form hidden" id="messageForm">
+            <form>
+                <div class="form-group">
+                    <label class="form-label" id="nameLabel">Your Name:</label>
+                    <input type="text" id="formName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="companyLabel">Company:</label>
+                    <input type="text" id="formCompany" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="emailLabel">Email:</label>
+                    <input type="email" id="formEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="messageLabel">Message for Roger:</label>
+                    <textarea id="formMessage" class="form-input form-textarea" required></textarea>
+                </div>
+                <div class="form-submit-group">
+                    <button type="button" class="generate-draft-btn" id="generateDraftBtn">
+                        ✨ <span id="generateDraftBtnText">Draft Message</span>
+                    </button>
+                    <button type="submit" class="form-submit" id="submitBtn">Send Message</button>
+                </div>
+                <div class="close-notice hidden" id="closeNotice">
+                    <p id="closeNoticeText"></p>
+                </div>
+            </form>
+        </div>
+        <div class="chat-rating-container hidden" id="chatRatingContainer">
+            <p id="ratingPrompt" class="rating-prompt"></p>
+            <div class="stars" id="starRating">
+                <svg class="star" data-value="1" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                <svg class="star" data-value="2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                <svg class="star" data-value="3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                <svg class="star" data-value="4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                <svg class="star" data-value="5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            </div>
+            <p id="ratingThankYou" class="rating-thank-you hidden"></p>
+        </div>
+
+        <div class="creator-signature" id="creatorSignature"></div>
+    </div>
+
+
+    <script>
+        // --- Global State Variables ---
+        let currentLanguage = 'en';
+        let conversationStep = 0;
+        let userInfo = {};
+        let isTyping = false;
+        let waitingForScheduleConfirmation = false;
+        let isSchedulingDirectly = false;
+        let directScheduleSubStep = 0;
+        let isLeavingMessageDirectly = false;
+        let directMessageSubStep = 0;
+        let isViewingResume = false;
+
+        // IMPORTANT: This URL MUST MATCH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL EXACTLY.
+        // It has been pre-filled with the URL you provided:
+        const GOOGLE_APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxJdlZ4awyjewHUP-F-ExZVjmSzNXWwTjhB5LEOmboTD94lSy_cOu1ltgley2dYfjDtRw/exec';
+
+        // --- Cached DOM Elements ---
+        let chatMessagesContainer, chatInput, sendButton, quickRepliesContainer,
+            chatInputContainer, messageForm, formName, formCompany, formEmail,
+            formMessage, nameLabel, companyLabel, emailLabel, messageLabel, submitBtn, closeNotice, chatTitleElement, chatSubtitleElement,
+            profilePicImg, avatarFallback, generateDraftButton,
+            generateDraftButtonText, chatRatingContainer, ratingPrompt, starRatingContainer, ratingThankYou,
+            closeNoticeText, creatorSignatureElement, welcomeVideoPlayer, chatHeaderElement,
+            languageSelectionScreen, englishButton, japaneseButton, chatContainer;
+
+
+        // --- Localization Data ---
+        const messages = {
+            en: {
+                welcome: "👋 Hello! I'm Roger's AI assistant. I'm here to connect you with Roger.",
+                intro: "I can help you:\n• Schedule a casual chat with Roger\n• Leave a message for Roger\n• Hear a greeting from Roger\n• Watch Roger's Video\n• Connect on LinkedIn\n• View Resume",
+                askName: "Great! Let's start. What's your name?",
+                askCompany: "Nice to meet you, {name}! What company do you work for?",
+                askPurpose: "Thanks, {name}! What brings you here today? Are you looking to:",
+                rogerMessage: "Hello and thank you for reaching out!\n\nI’m always eager to connect with forward-thinking teams and explore exciting opportunities where I can make a real impact. Whether you’re hiring for a specific role or just exploring how I could support your business goals—I’d love to chat. Let’s discover what we can build together!\n– Roger",
+                afterRogerMessage: "Is there anything else I can help you with?\n\nFeel free to use the buttons below to schedule a chat with Roger or leave a message—whichever works best for you!",
+                scheduleDirectMessage: "Perfect! Please click the button below to open Roger's calendar and schedule your chat.",
+                scheduleConfirm: "Perfect! I'll open Roger's calendar for you. You can schedule a time that works best.",
+                scheduleFollowUp: "Have you finished scheduling your appointment with Roger?",
+                appointmentComplete: "Excellent! Roger will receive your booking confirmation and will be prepared for your meeting. Thank you for connecting with us!",
+                windowClosing: "This window will close automatically in 3 seconds...",
+                messagePrompt: "I'd be happy to help you send a message to Roger. Please fill out the form below:",
+                goodbye: "Thank you for your time! Feel free to reach out anytime.",
+                scheduleStillWorking: "No problem! Please let me know if you are 'done' or are 'still working on it' when you are ready to proceed.",
+                scheduleHelp: "I'm sorry, I didn't understand. Please let me know if you are 'done' or are 'still working on it'.",
+                generalFallback: "I'm sorry, I didn't quite understand what you meant. If you're having trouble typing, you can always choose an option from the buttons below.",
+                formSending: "Sending...",
+                formSent: "Message sent successfully! This window will close in 3 seconds...",
+                formError: "Failed to send message. Please try again or contact Roger directly.",
+                chatTitleMain: "Roger's AI Assistant",
+                chatSubtitleMain: "Connecting you with Roger",
+                inputPlaceholder: "Type your message...",
+                profileAltText: "AI Assistant",
+                generateDraft: "Draft Message",
+                generatingDraft: "Generating...",
+                draftGenerated: "Draft Generated!",
+                rateExperience: "Please rate your experience:",
+                thankYouForFeedback: "Thank You for your feedback!",
+                watchVideo: "Certainly! Here's Roger's video for recruiters: <a href='https://vimeo.com/1090730386/4c50b956d0' target='_blank' rel='noopener noreferrer' class='video-link'>From Paper to Person</a>",
+                linkedinMessage: "Great! Here's a link to Roger's LinkedIn profile: <a href='https://www.linkedin.com/in/meetrogergomes' target='_blank' rel='noopener noreferrer' class='linkedin-link'>linkedin.com/in/meetrogergomes</a>",
+                openCalendlyButton: "Open Roger's Calendar",
+                exitButton: "Exit",
+                creatorSignaturePrefix: "Created by",
+                welcomeVideo: 'https://gomesroger.github.io/roger-ai-assets/Ai%20Assistant%20Video-%20ENG.webm',
+                videoPlaybackError: "Video could not be played. Proceeding with text introduction.",
+                viewResumePrompt: "Certainly! Here are Roger's resumes. Please click the links to open them in a new tab:",
+                englishResumeContent: `
+                    <div class="resume-links-container">
+                        <a href="https://drive.google.com/file/d/1QvKRiQVG8sSTsjMPtjjR0mqjgEHo1Tob/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="resume-link">View English Resume</a>
+                    </div>
+                `,
+                japaneseResumeContent: `
+                    <div class="resume-links-container">
+                        <p>履歴書 (Resume):</p>
+                        <a href="https://drive.google.com/file/d/1BAUvcifMVwEwcgs1q2xVzd5qZ9MHVd1u/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="resume-link">履歴書を開く</a>
+                        <p style="margin-top: 10px;">職務経歴 (Work History):</p>
+                        <a href="https://drive.google.com/file/d/1YDySzzwUWRsnoCQxUT6YX4JCfje6mSRs/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="resume-link">職務経歴を開く</a>
+                    </div>
+                `,
+                backToOptions: "What else can I help you with?",
+                // New keys for quick reply button texts
+                qrScheduleChat: "Schedule a chat",
+                qrLeaveMessage: "Leave a message",
+                qrHearGreeting: "Hear a greeting from Roger",
+                qrWatchVideo: "Watch Roger's Video",
+                qrConnectLinkedIn: "Connect on LinkedIn",
+                qrViewResume: "View Resume",
+                qrExit: "Exit",
+                qrYesDone: "Yes, I'm done",
+                qrStillWorking: "Still working on it",
+                qrOpenCalendly: "Open Roger's Calendar",
+                qrBackToOptions: "Back to options"
+            },
+            ja: {
+                welcome: "👋 こんにちは！私はロジャーのAIアシスタントです。ロジャーとつながるお手伝いをします。",
+                intro: "以下のことをお手伝いできます：\n• ロジャーとのカジュアルチャットのスケジュール調整\n• ロジャーへのメッセージのお預かり\n• ロジャーより歓迎の言葉\n• ロジャーのビデオを見る\n• LinkedInでつながる\n• 履歴書を見る",
+                askName: "まず、お名前を教えてください。",
+                askCompany: "{name}さん、はじめまして！どちらの会社にお勤めですか？",
+                askPurpose: "{name}さん、ありがとうございます！本日はどのようなご用件でしょうか？",
+                rogerMessage: "こんにちは！ご連絡いただきありがとうございます。\n\n常に新しいご縁やチャレンジにワクワクしています。具体的なポジションのご相談はもちろん、「どんな形で力になれるか話してみたい」というカジュアルなご連絡も大歓迎です。\n\nご一緒に新しい可能性を探っていけたら嬉しいです！\n– ロジャー",
+                afterRogerMessage: "他にお手伝いできることはありますか？\n\nロジャーとのチャット予約やメッセージの送信は、下のボタンからお気軽にどうぞ！",
+                scheduleDirectMessage: "完璧です！以下のボタンをクリックしてロジャーのカレンダーを開き、チャットを予約してください。",
+                scheduleConfirm: "完璧です！ロジャーのカレンダーを開きます。最適な時間を選択してください。",
+                scheduleFollowUp: "ロジャーとのアポイントメントの予約は完了しましたか？",
+                appointmentComplete: "素晴らしい！ロジャーが予約確認を受け取り、ミーティングの準備をいたします。ご連絡いただきありがとうございました！",
+                windowClosing: "このウィンドウは3秒後に自動的に閉じます...",
+                messagePrompt: "ロジャーにメッセージをお送りするお手伝いをいたします。以下のフォームにご記入ください：",
+                goodbye: "お時間をいただき、ありがとうございました！いつでもお気軽にご連絡ください。",
+                scheduleStillWorking: "問題ありません！「完了しました」または「まだ作業中です」のどちらかでお知らせください。",
+                scheduleHelp: "申し訳ありません、理解できませんでした。「完了しました」または「まだ作業中です」のどちらかでお知らせください。",
+                generalFallback: "申し訳ありません、おっしゃっている意味がよく分かりませんでした。もし入力でお困りでしたら、下のボタンからオプションを選んでください。",
+                formSending: "送信中...",
+                formSent: "メッセージが正常に送信されました！このウィンドウは3秒後に閉じます...",
+                formError: "メッセージの送信に失敗しました。もう一度お試しいただくか、直接ロジャーにご連絡ください。",
+                chatTitleMain: "Roger's AIアシスタント",
+                chatSubtitleMain: "ロジャーとのご連絡をお手伝いします",
+                inputPlaceholder: "メッセージを入力...",
+                profileAltText: "AIアシスタント",
+                generateDraft: "メッセージ下書き生成",
+                generatingDraft: "生成中...",
+                draftGenerated: "下書きを生成しました！",
+                rateExperience: "体験はいかがでしたか？",
+                thankYouForFeedback: "フィードバックありがとうございます！",
+                watchVideo: "はい、承知いたしました。採用担当者向けのロジャーのビデオはこちらです：<a href='https://vimeo.com/1090731598/b065f49f38' target='_blank' rel='noopener noreferrer' class='video-link'>簡単なご挨拶</a>",
+                linkedinMessage: "はい、承知いたしました。ロジャーのLinkedInプロフィールはこちらです：<a href='https://www.linkedin.com/in/meetrogergomes' target='_blank' rel='noopener noreferrer' class='linkedin-link'>linkedin.com/in/meetrogergomes</a>",
+                openCalendlyButton: "ロジャーのカレンダーを開く",
+                exitButton: "終了",
+                creatorSignaturePrefix: "作成者：",
+                welcomeVideo: 'https://gomesroger.github.io/roger-ai-assets/Ai%20Assistant%20Video-%20JPN.webm',
+                videoPlaybackError: "動画を再生できませんでした。テキストでの導入に進みます。",
+                viewResumePrompt: "はい、承知いたしました。ロジャーの履歴書はこちらです。以下のリンクをクリックして新しいタブで開いてください：",
+                japaneseResumeContent: `
+                    <div class="resume-links-container">
+                        <p>履歴書 (Resume):</p>
+                        <a href="https://drive.google.com/file/d/1BAUvcifMVwEwcgs1q2xVzd5qZ9MHVd1u/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="resume-link">履歴書を開く</a>
+                        <p style="margin-top: 10px;">職務経歴 (Work History):</p>
+                        <a href="https://drive.google.com/file/d/1YDySzzwUWRsnoCQxUT6YX4JCfje6mSRs/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="resume-link">職務経歴を開く</a>
+                    </div>
+                `,
+                backToOptions: "オプションに戻る",
+                // New keys for quick reply button texts
+                qrScheduleChat: "Schedule a chat",
+                qrLeaveMessage: "Leave a message",
+                qrHearGreeting: "Hear a greeting from Roger",
+                qrWatchVideo: "Watch Roger's Video",
+                qrConnectLinkedIn: "Connect on LinkedIn",
+                qrViewResume: "View Resume",
+                qrExit: "Exit",
+                qrYesDone: "Yes, I'm done",
+                qrStillWorking: "Still working on it",
+                qrOpenCalendly: "Open Roger's Calendar",
+                qrBackToOptions: "Back to options"
+            }
+        };
+
+        // quickRepliesData now refers to keys in the messages object
+        const quickRepliesData = {
+            en: {
+                start: ["qrScheduleChat", "qrLeaveMessage", "qrHearGreeting", "qrWatchVideo", "qrConnectLinkedIn", "qrViewResume", "qrExit"],
+                purpose: ["qrScheduleChat", "qrLeaveMessage", "qrHearGreeting", "qrWatchVideo", "qrConnectLinkedIn", "qrViewResume", "qrExit"],
+                scheduleConfirm: ["qrYesDone", "qrStillWorking"],
+                openCalendly: ["qrOpenCalendly"],
+                afterRogerMessage: ["qrScheduleChat", "qrLeaveMessage", "qrWatchVideo", "qrConnectLinkedIn", "qrViewResume", "qrExit"],
+                afterResumeView: ["qrBackToOptions"]
+            },
+            ja: {
+                start: ["qrScheduleChat", "qrLeaveMessage", "qrHearGreeting", "qrWatchVideo", "qrConnectLinkedIn", "qrViewResume", "qrExit"],
+                purpose: ["qrScheduleChat", "qrLeaveMessage", "qrHearGreeting", "qrWatchVideo", "qrConnectLinkedIn", "qrViewResume", "qrExit"],
+                scheduleConfirm: ["qrYesDone", "qrStillWorking"],
+                openCalendly: ["qrOpenCalendly"],
+                afterRogerMessage: ["qrScheduleChat", "qrLeaveMessage", "qrWatchVideo", "qrConnectLinkedIn", "qrViewResume", "qrExit"],
+                afterResumeView: ["qrBackToOptions"]
+            }
+        };
+
+        const formLabelsData = {
+            en: {
+                name: "Your Name:",
+                company: "Company:",
+                email: "Email:",
+                message: "Message for Roger:",
+                submit: "Send Message"
+            },
+            ja: {
+                name: "お名前:",
+                company: "会社名:",
+                email: "メールアドレス:",
+                message: "ロジャーへのメッセージ:",
+                submit: "メッセージを送信"
+            }
+        };
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', function() {
+            cacheDOMElements();
+            initializeEventListeners();
+            // Initially, only show the language selection screen
+            languageSelectionScreen.style.display = 'flex';
+            chatContainer.style.display = 'none'; // Ensure chat is hidden
+        });
+
+        /**
+         * Caches references to frequently used DOM elements.
+         */
+        function cacheDOMElements() {
+            languageSelectionScreen = document.getElementById('languageSelectionScreen');
+            englishButton = document.querySelector('.language-button.english');
+            japaneseButton = document.querySelector('.language-button.japanese');
+            chatContainer = document.getElementById('chatContainer');
+
+            chatMessagesContainer = document.getElementById('chatMessages');
+            chatInput = document.getElementById('chatInput');
+            sendButton = document.getElementById('sendBtn');
+            quickRepliesContainer = document.getElementById('quickReplies');
+            chatInputContainer = document.getElementById('chatInputContainer');
+            messageForm = document.getElementById('messageForm');
+            formName = document.getElementById('formName');
+            formCompany = document.getElementById('formCompany');
+            formEmail = document.getElementById('formEmail');
+            formMessage = document.getElementById('formMessage');
+            nameLabel = document.getElementById('nameLabel');
+            companyLabel = document.getElementById('companyLabel');
+            emailLabel = document.getElementById('emailLabel');
+            messageLabel = document.getElementById('messageLabel');
+            submitBtn = document.getElementById('submitBtn');
+            closeNotice = document.getElementById('closeNotice');
+            chatTitleElement = document.querySelector('.chat-title');
+            chatSubtitleElement = document.querySelector('.chat-subtitle');
+            profilePicImg = document.querySelector('.profile-pic img');
+            avatarFallback = document.getElementById('avatarFallback');
+            generateDraftButton = document.getElementById('generateDraftBtn');
+            generateDraftButtonText = document.getElementById('generateDraftBtnText');
+            chatRatingContainer = document.getElementById('chatRatingContainer');
+            ratingPrompt = document.getElementById('ratingPrompt');
+            starRatingContainer = document.getElementById('starRating');
+            ratingThankYou = document.getElementById('ratingThankYou');
+            closeNoticeText = document.getElementById('closeNoticeText');
+            creatorSignatureElement = document.getElementById('creatorSignature');
+            welcomeVideoPlayer = document.getElementById('welcomeVideoPlayer');
+            chatHeaderElement = document.querySelector('.chat-header');
+        }
+
+        /**
+         * Initializes all event listeners for buttons and input fields.
+         */
+        function initializeEventListeners() {
+            englishButton.addEventListener('click', () => setLanguage('en'));
+            japaneseButton.addEventListener('click', () => setLanguage('ja'));
+            sendButton.addEventListener('click', handleSendButtonClick);
+            chatInput.addEventListener('keypress', handleChatInputKeypress);
+            quickRepliesContainer.addEventListener('click', handleQuickReplyClick);
+            messageForm.addEventListener('submit', handleFormSubmit);
+            starRatingContainer.addEventListener('click', handleStarRating);
+            generateDraftButton.addEventListener('click', handleGenerateDraft);
+
+            // Dynamically adjust textarea height
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = chatInput.scrollHeight + 'px';
+            });
+        }
+
+        /**
+         * Sets the application language and transitions to the chat screen.
+         * @param {string} lang - The language code ('en' or 'ja').
+         */
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            updateLocalization();
+            languageSelectionScreen.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            startConversation();
+        }
+
+        /**
+         * Updates all localized text elements on the page.
+         */
+        function updateLocalization() {
+            chatTitleElement.textContent = messages[currentLanguage].chatTitleMain;
+            chatSubtitleElement.textContent = messages[currentLanguage].chatSubtitleMain;
+            chatInput.placeholder = messages[currentLanguage].inputPlaceholder;
+            profilePicImg.alt = messages[currentLanguage].profileAltText;
+            nameLabel.textContent = formLabelsData[currentLanguage].name;
+            companyLabel.textContent = formLabelsData[currentLanguage].company;
+            emailLabel.textContent = formLabelsData[currentLanguage].email;
+            messageLabel.textContent = formLabelsData[currentLanguage].message;
+            submitBtn.textContent = formLabelsData[currentLanguage].submit;
+            generateDraftButtonText.textContent = messages[currentLanguage].generateDraft;
+            ratingPrompt.textContent = messages[currentLanguage].rateExperience;
+
+            creatorSignatureElement.innerHTML = `${messages[currentLanguage].creatorSignaturePrefix} Roger Gomes & Google Gemini`;
+        }
+
+        /**
+         * Starts the conversation with a welcome message and quick replies.
+         */
+        function startConversation() {
+            const videoUrl = messages[currentLanguage].welcomeVideo;
+            if (videoUrl) {
+                welcomeVideoPlayer.src = videoUrl;
+                welcomeVideoPlayer.load();
+                welcomeVideoPlayer.classList.add('visible');
+                chatHeaderElement.classList.add('video-active');
+                chatInputContainer.classList.add('hidden');
+
+                const playPromise = welcomeVideoPlayer.play();
+
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        console.log("Video playback started.");
+                        welcomeVideoPlayer.onended = () => {
+                            console.log("Video ended.");
+                            welcomeVideoPlayer.classList.remove('visible');
+                            chatHeaderElement.classList.remove('video-active');
+                            chatInputContainer.classList.remove('hidden');
+                            addBotMessage(messages[currentLanguage].welcome);
+                            setTimeout(() => {
+                                addBotMessage(messages[currentLanguage].intro);
+                                displayQuickReplies('start');
+                                conversationStep = 0;
+                            }, 1000);
+                        };
+                    }).catch(error => {
+                        console.error("Video playback prevented:", error);
+                        welcomeVideoPlayer.classList.remove('visible');
+                        chatHeaderElement.classList.remove('video-active');
+                        chatInputContainer.classList.remove('hidden');
+                        addBotMessage(messages[currentLanguage].welcome);
+                        setTimeout(() => {
+                            addBotMessage(messages[currentLanguage].intro);
+                            displayQuickReplies('start');
+                            conversationStep = 0;
+                        }, 1000);
+                        addBotMessage(messages[currentLanguage].videoPlaybackError);
+                    });
+                } else {
+                    console.warn("Browser does not support playPromise. Proceeding without waiting for video.");
+                    welcomeVideoPlayer.classList.remove('visible');
+                    chatHeaderElement.classList.remove('video-active');
+                    chatInputContainer.classList.remove('hidden');
+                    addBotMessage(messages[currentLanguage].welcome);
+                    setTimeout(() => {
+                        addBotMessage(messages[currentLanguage].intro);
+                        displayQuickReplies('start');
+                        conversationStep = 0;
+                    }, 1000);
+                }
+            } else {
+                addBotMessage(messages[currentLanguage].welcome);
+                setTimeout(() => {
+                    addBotMessage(messages[currentLanguage].intro);
+                    displayQuickReplies('start');
+                    conversationStep = 0;
+                }, 1000);
+            }
+        }
+
+        /**
+         * Adds a message to the chat display.
+         * @param {string} text - The message text.
+         * @param {string} sender - 'user' or 'bot'.
+         * @param {boolean} isHtml - True if the text contains HTML that should be rendered.
+         */
+        function addMessage(text, sender, isHtml = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+            const timeSpan = document.createElement('span');
+            timeSpan.classList.add('message-time');
+            timeSpan.textContent = new Date().toLocaleTimeString(currentLanguage, { hour: '2-digit', minute: '2-digit' });
+
+            if (isHtml) {
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = text;
+                messageElement.appendChild(contentDiv);
+            } else {
+                messageElement.innerHTML = text.replace(/\n/g, '<br>');
+            }
+
+            messageElement.appendChild(timeSpan);
+            chatMessagesContainer.appendChild(messageElement);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        /**
+         * Convenience function to add a bot message.
+         * @param {string} text - The message text.
+         * @param {boolean} isHtml - True if the text contains HTML.
+         */
+        function addBotMessage(text, isHtml = false) {
+            addMessage(text, 'bot', isHtml);
+        }
+
+        /**
+         * Convenience function to add a user message for manually typed input.
+         * @param {string} text - The message text.
+         */
+        function addUserMessage(text) {
+            addMessage(text, 'user');
+        }
+
+        /**
+         * Displays a set of quick replies based on the provided key.
+         * @param {string} key - The key for the quick replies data.
+         */
+        function displayQuickReplies(key) {
+            quickRepliesContainer.innerHTML = '';
+            quickRepliesContainer.classList.remove('hidden');
+            const replyKeys = quickRepliesData[currentLanguage][key];
+            if (replyKeys) {
+                replyKeys.forEach(replyKey => {
+                    const button = document.createElement('button');
+                    button.classList.add('quick-reply');
+                    button.textContent = getLocalizedText(replyKey); // Use getLocalizedText with the key
+                    quickRepliesContainer.appendChild(button);
+                });
+            }
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        /**
+         * Hides the quick replies.
+         */
+        function hideQuickReplies() {
+            quickRepliesContainer.classList.add('hidden');
+        }
+
+        /**
+         * Shows the typing indicator.
+         */
+        function showTypingIndicator() {
+            if (isTyping) return;
+            isTyping = true;
+            const indicator = document.createElement('div');
+            indicator.classList.add('message', 'bot', 'typing-indicator');
+            indicator.innerHTML = `
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            chatMessagesContainer.appendChild(indicator);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            toggleInputAndSendButton(false);
+        }
+
+        /**
+         * Hides the typing indicator.
+         */
+        function hideTypingIndicator() {
+            isTyping = false;
+            const indicator = document.querySelector('.typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+            toggleInputAndSendButton(true);
+        }
+
+        /**
+         * Toggles the disabled state of the chat input and send button.
+         * @param {boolean} enable - True to enable, false to disable.
+         */
+        function toggleInputAndSendButton(enable) {
+            chatInput.disabled = !enable;
+            sendButton.disabled = !enable;
+        }
+
+        /**
+         * Handles user input from the chat text area or quick replies.
+         * @param {string} text - The user's message.
+         * @param {boolean} fromQuickReply - True if the input originated from a quick reply button.
+         */
+        async function handleUserInput(text, fromQuickReply = false) {
+            if (!fromQuickReply) {
+                addUserMessage(text);
+            }
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            hideQuickReplies();
+            showTypingIndicator();
+            toggleInputAndSendButton(false);
+
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking time
+
+            const lowerCaseText = text.toLowerCase().trim();
+
+            if (isViewingResume && lowerCaseText === getLocalizedText('qrBackToOptions').toLowerCase()) {
+                isViewingResume = false;
+                addBotMessage(getLocalizedText('backToOptions'));
+                displayQuickReplies('purpose');
+                conversationStep = 2;
+            } else if (waitingForScheduleConfirmation) {
+                if (lowerCaseText === getLocalizedText("qrYesDone").toLowerCase()) {
+                    waitingForScheduleConfirmation = false;
+                    addBotMessage(getLocalizedText('appointmentComplete'));
+                    setTimeout(() => {
+                        addBotMessage(getLocalizedText('goodbye'));
+                        hideQuickReplies();
+                        chatInputContainer.classList.add('hidden');
+                        chatRatingContainer.classList.remove('hidden');
+                    }, 2000);
+                } else if (lowerCaseText === getLocalizedText("qrStillWorking").toLowerCase()) {
+                    addBotMessage(getLocalizedText('scheduleStillWorking'));
+                    displayQuickReplies('scheduleConfirm');
+                } else {
+                    addBotMessage(getLocalizedText('scheduleHelp'));
+                    displayQuickReplies('scheduleConfirm');
+                }
+            } else if (isSchedulingDirectly || isLeavingMessageDirectly) {
+                addBotMessage(getLocalizedText('generalFallback'));
+                isSchedulingDirectly = false;
+                isLeavingMessageDirectly = false;
+                displayQuickReplies('purpose');
+                conversationStep = 2;
+            } else {
+                switch (conversationStep) {
+                    case 0:
+                        const quickReplyOptionKeysStart = quickRepliesData[currentLanguage]['start'];
+                        const matchedStartKey = quickReplyOptionKeysStart.find(key => getLocalizedText(key).toLowerCase() === lowerCaseText);
+
+                        if (matchedStartKey) {
+                            processQuickReply(getLocalizedText(matchedStartKey)); // Pass the actual display text
+                        } else {
+                            userInfo.name = text;
+                            addBotMessage(messages[currentLanguage].askCompany.replace('{name}', userInfo.name));
+                            displayQuickReplies('purpose');
+                            conversationStep = 1;
+                        }
+                        break;
+                    case 1:
+                        const quickReplyOptionKeysPurpose = quickRepliesData[currentLanguage]['purpose'];
+                        const matchedPurposeKey = quickReplyOptionKeysPurpose.find(key => getLocalizedText(key).toLowerCase() === lowerCaseText);
+
+                        if (matchedPurposeKey) {
+                            processQuickReply(getLocalizedText(matchedPurposeKey)); // Pass the actual display text
+                        } else {
+                            userInfo.company = text;
+                            addBotMessage(messages[currentLanguage].askPurpose.replace('{name}', userInfo.company)); // Fixed placeholder
+                            displayQuickReplies('purpose');
+                            conversationStep = 2;
+                        }
+                        break;
+                    case 2:
+                        processQuickReply(text);
+                        break;
+                    case 99: // This state is for "Back to options" which is handled by the first if block
+                        addBotMessage(messages[currentLanguage].generalFallback);
+                        displayQuickReplies('afterResumeView');
+                        break;
+                    default:
+                        addBotMessage(messages[currentLanguage].generalFallback);
+                        displayQuickReplies('purpose');
+                        conversationStep = 2;
+                        break;
+                }
+            }
+            hideTypingIndicator();
+            toggleInputAndSendButton(true);
+        }
+
+        /**
+         * Processes a quick reply chosen by the user.
+         * @param {string} replyText - The text of the chosen quick reply.
+         */
+        function processQuickReply(replyText) {
+            const lowerCaseReplyText = replyText.toLowerCase();
+
+            // Compare against localized quick reply texts
+            if (lowerCaseReplyText === getLocalizedText("qrScheduleChat").toLowerCase()) {
+                addBotMessage(getLocalizedText('scheduleDirectMessage'));
+                // This QR is supposed to trigger the Calendly link directly.
+                // It's not a QR button for "Open Calendly", but rather "Schedule a chat"
+                // which then leads to the Calendly link.
+                // No need to display 'openCalendly' quick reply here if it's immediately opening.
+                window.open('https://calendly.com/rogergomes/15-minute-chat', '_blank');
+                waitingForScheduleConfirmation = true;
+                conversationStep = 3;
+                addBotMessage(getLocalizedText('scheduleFollowUp'));
+                displayQuickReplies('scheduleConfirm');
+            } else if (lowerCaseReplyText === getLocalizedText("qrLeaveMessage").toLowerCase()) {
+                addBotMessage(getLocalizedText('messagePrompt'));
+                chatInputContainer.classList.add('hidden');
+                messageForm.classList.remove('hidden');
+                isLeavingMessageDirectly = true;
+                conversationStep = 4;
+            } else if (lowerCaseReplyText === getLocalizedText("qrHearGreeting").toLowerCase()) {
+                addBotMessage(getLocalizedText('rogerMessage'));
+                setTimeout(() => {
+                    addBotMessage(getLocalizedText('afterRogerMessage'));
+                    displayQuickReplies('afterRogerMessage');
+                    conversationStep = 2;
+                }, 1500);
+            } else if (lowerCaseReplyText === getLocalizedText("qrWatchVideo").toLowerCase()) {
+                addBotMessage(getLocalizedText('watchVideo'), true);
+                displayQuickReplies('purpose');
+                conversationStep = 2;
+            } else if (lowerCaseReplyText === getLocalizedText("qrConnectLinkedIn").toLowerCase()) {
+                addBotMessage(getLocalizedText('linkedinMessage'), true);
+                displayQuickReplies('purpose');
+                conversationStep = 2;
+            } else if (lowerCaseReplyText === getLocalizedText("qrOpenCalendly").toLowerCase()) {
+                // This branch handles the explicit "Open Roger's Calendar" button if it appears
+                window.open('https://calendly.com/rogergomes/15-minute-chat', '_blank');
+                waitingForScheduleConfirmation = true;
+                conversationStep = 3;
+                addBotMessage(getLocalizedText('scheduleFollowUp'));
+                displayQuickReplies('scheduleConfirm');
+            } else if (lowerCaseReplyText === getLocalizedText("qrViewResume").toLowerCase()) {
+                isViewingResume = true;
+                addBotMessage(getLocalizedText('viewResumePrompt'));
+                addBotMessage(getLocalizedText(currentLanguage === 'en' ? 'englishResumeContent' : 'japaneseResumeContent'), true);
+                displayQuickReplies('afterResumeView');
+                conversationStep = 99;
+            } else if (lowerCaseReplyText === getLocalizedText("qrExit").toLowerCase()) {
+                addBotMessage(getLocalizedText('goodbye'));
+                hideQuickReplies();
+                chatInputContainer.classList.add('hidden');
+                chatRatingContainer.classList.remove('hidden');
+            } else {
+                addBotMessage(messages[currentLanguage].generalFallback);
+                displayQuickReplies('purpose');
+                conversationStep = 2;
+            }
+        }
+
+        /**
+         * Handles sending user input from the chat input field.
+         */
+        function handleSendButtonClick() {
+            const input = chatInput.value.trim();
+            if (input) {
+                handleUserInput(input, false);
+            }
+        }
+
+        /**
+         * Handles keypress events in the chat input field (for 'Enter' key).
+         * @param {KeyboardEvent} event - The keyboard event.
+         */
+        function handleChatInputKeypress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                handleSendButtonClick();
+            }
+        }
+
+        /**
+         * Handles clicks on quick reply buttons.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function handleQuickReplyClick(event) {
+            if (event.target.classList.contains('quick-reply')) {
+                handleUserInput(event.target.textContent, true); // Pass true to indicate quick reply
+            }
+        }
+
+        /**
+         * Handles the form submission for leaving a message.
+         * @param {Event} event - The form submission event.
+         */
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const formNameValue = formName.value;
+            const formCompanyValue = formCompany.value;
+            const formEmailValue = formEmail.value;
+            const formMessageValue = formMessage.value;
+
+            submitBtn.disabled = true;
+            generateDraftButton.disabled = true;
+            closeNotice.classList.add('hidden');
+            closeNoticeText.textContent = messages[currentLanguage].formSending;
+            closeNotice.classList.remove('hidden');
+
+            const payload = {
+                name: formNameValue,
+                company: formCompanyValue,
+                email: formEmailValue,
+                message: formMessageValue
+            };
+
+            console.log('[AI Assistant Debug] Attempting fetch to:', GOOGLE_APPS_SCRIPT_WEB_APP_URL);
+            console.log('[AI Assistant Debug] Payload:', JSON.stringify(payload));
+
+            try {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'cors', // Ensure CORS is enabled
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                console.log('[AI Assistant Debug] Fetch response received. Status:', response.status);
+
+                // Check if the response itself indicates an HTTP error (e.g., 404, 500)
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`[AI Assistant Debug] HTTP error! Status: ${response.status}, Body:`, errorText); // Log actual server response body
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('[AI Assistant Debug] Parsed response JSON:', result);
+
+
+                if (result.success) {
+                    closeNoticeText.innerHTML = `${messages[currentLanguage].formSent}<br>
+                        <div class="email-content-display">
+                            <strong>${formLabelsData[currentLanguage].name}:</strong> ${formNameValue}<br>
+                            <strong>${formLabelsData[currentLanguage].company}:</strong> ${formCompanyValue}<br>
+                            <strong>${formLabelsData[currentLanguage].email}:</strong> ${formEmailValue}<br>
+                            <strong>${formLabelsData[currentLanguage].message}:</strong><br>${formMessageValue}
+                        </div>
+                        <button class="copy-btn" onclick="copyEmailContent()">Copy to Clipboard</button>`;
+
+                    setTimeout(() => {
+                        messageForm.classList.add('hidden');
+                        chatInputContainer.classList.remove('hidden');
+                        chatRatingContainer.classList.remove('hidden');
+                        formName.value = '';
+                        formCompany.value = '';
+                        formEmail.value = '';
+                        formMessage.value = '';
+                        isLeavingMessageDirectly = false;
+                    }, 3000);
+                } else {
+                    console.error('[AI Assistant Debug] API reported failure:', result.message);
+                    closeNoticeText.textContent = messages[currentLanguage].formError + ` (${result.message || 'Unknown error'})`;
+                    submitBtn.disabled = false;
+                    generateDraftButton.disabled = false;
+                }
+            } catch (error) {
+                console.error('[AI Assistant Debug] Error sending message (catch block):', error.message); // Log error message
+                closeNoticeText.textContent = messages[currentLanguage].formError + ` (${error.message || 'Network error'})`;
+                closeNotice.classList.remove('hidden');
+                submitBtn.disabled = false;
+                generateDraftButton.disabled = false;
+            } finally {
+                // Ensure buttons are re-enabled even on success, but after UI update
+                // This block will execute regardless of try/catch outcome
+            }
+        }
+
+        // Global function for copying email content (needed for inline onclick)
+        function copyEmailContent() {
+            const emailContentDiv = document.querySelector('.email-content-display');
+            if (emailContentDiv) {
+                const textToCopy = emailContentDiv.innerText;
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    console.log('Content copied to clipboard!');
+                    const copyBtn = document.querySelector('.close-notice .copy-btn');
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                    }, 1500);
+                } catch (err) {
+                    console.error('Failed to copy: ', err);
+                    console.log('Failed to copy content.');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        /**
+         * Handles the star rating selection.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function handleStarRating(event) {
+            if (event.target.classList.contains('star')) {
+                const rating = parseInt(event.target.dataset.value);
+                Array.from(starRatingContainer.children).forEach(star => {
+                    const starValue = parseInt(star.dataset.value);
+                    if (starValue <= rating) {
+                        star.classList.add('selected');
+                    } else {
+                        star.classList.remove('selected');
+                    }
+                });
+                ratingThankYou.textContent = messages[currentLanguage].thankYouForFeedback;
+                ratingThankYou.classList.remove('hidden');
+                starRatingContainer.style.pointerEvents = 'none';
+            }
+        }
+
+        /**
+         * Fetches a draft message from the Gemini API.
+         */
+        async function handleGenerateDraft() {
+            if (!formName.value || !formCompany.value || !formEmail.value) {
+                closeNoticeText.textContent = 'Please fill in your Name, Company, and Email to generate a draft.';
+                closeNotice.classList.remove('hidden');
+                return;
+            }
+
+            generateDraftButton.disabled = true;
+            submitBtn.disabled = true;
+            generateDraftButtonText.textContent = messages[currentLanguage].generatingDraft;
+            closeNotice.classList.add('hidden');
+
+            const prompt = `Based on the following information, draft a professional message for Roger.
+Name: ${formName.value}
+Company: ${formCompany.value}
+Email: ${formEmail.value}
+Purpose: I need to draft a message to Roger.
+Draft a concise, professional message for Roger in ${currentLanguage === 'en' ? 'English' : 'Japanese'} regarding a potential connection or inquiry.`;
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = ""; // API key is automatically provided by Canvas runtime. DO NOT ADD your API key here.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                console.log('[AI Assistant Debug] Calling Gemini API for draft generation.');
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                console.log('[AI Assistant Debug] Gemini API response:', result);
+
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    formMessage.value = text;
+                    generateDraftButtonText.textContent = messages[currentLanguage].draftGenerated;
+                    closeNoticeText.textContent = messages[currentLanguage].draftGenerated;
+                    closeNotice.classList.remove('hidden');
+                } else {
+                    console.error('[AI Assistant Debug] Unexpected Gemini API response structure:', result);
+                    closeNoticeText.textContent = 'Failed to generate draft. Please try again.';
+                    closeNotice.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('[AI Assistant Debug] Error calling Gemini API:', error);
+                closeNoticeText.textContent = 'An error occurred while generating the draft. Please try again.';
+                closeNotice.classList.remove('hidden');
+            } finally {
+                generateDraftButton.disabled = false;
+                submitBtn.disabled = false;
+                if (generateDraftButtonText.textContent === messages[currentLanguage].generatingDraft) {
+                    generateDraftButtonText.textContent = messages[currentLanguage].generateDraft;
+                }
+            }
+        }
+
+        /**
+         * Helper to get localized text.
+         * @param {string} key - The key for the message.
+         * @returns {string} The localized message.
+         */
+        function getLocalizedText(key) {
+            return messages[currentLanguage][key];
+        }
+    </script>
+</body>
+</html>
